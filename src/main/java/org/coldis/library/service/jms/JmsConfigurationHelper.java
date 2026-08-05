@@ -30,6 +30,7 @@ import org.springframework.jms.support.destination.DestinationResolver;
 import org.springframework.stereotype.Component;
 import org.springframework.util.ErrorHandler;
 
+import io.micrometer.core.instrument.MeterRegistry;
 import jakarta.jms.ConnectionFactory;
 
 /**
@@ -74,6 +75,10 @@ public class JmsConfigurationHelper {
 	@Autowired(required = false)
 	@Qualifier("enhancedJmsErrorHandler")
 	private ErrorHandler errorHandler;
+
+	/** Meter registry. */
+	@Autowired(required = false)
+	private MeterRegistry meterRegistry;
 
 	/**
 	 * Gets the JMS listener executor.
@@ -500,8 +505,8 @@ public class JmsConfigurationHelper {
 				properties.getClass().getAnnotation(ConfigurationProperties.class) == null ? null
 						: properties.getClass().getAnnotation(ConfigurationProperties.class).prefix());
 		final ExtendedArtemisProperties actualProperties = this.mergeProperties(properties);
-		return new JmsPoolConnectionFactoryFactory(actualProperties.getPool())
-				.createPooledConnectionFactory(this.createNativeJmsConnectionFactory(beanFactory, actualProperties));
+		return MeteredJmsPoolConnectionFactory.create(this.meterRegistry, actualProperties.getPool(),
+				this.createNativeJmsConnectionFactory(beanFactory, actualProperties));
 	}
 
 	/**
